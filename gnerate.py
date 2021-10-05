@@ -1,9 +1,72 @@
 import math
 import time 
 
+def calc_line_params(p1,p2):
+    a = (p1["y"] - p2["y"])/(p1["x"] - p2["x"])
+    b = p1["y"]/(a*p1["x"])
+    return {"a": a, "b": b}
+
+def calc_y(line_params, x):
+    y = line_params["a"]*x + line_params["b"]
+    return y 
+
+def calc_x(line_params, y):
+    x = (line_params["b"] - y)/line_params["a"]
+    return x
+
+
 def fit_points_to_the_limit(points, points_in_range, limit):
 
-    return points_in_range
+    point_count = len(points)
+    partialy_corrected_points = []
+
+    for i in range(point_count):
+
+        pir = points_in_range[i]
+        por = points[i]
+        prev_pir_idx = i-1 if i != 0 else point_count-1
+        next_pir_idx = i+1 if i != point_count-1 else 0
+        prev_pir = points_in_range[prev_pir_idx]
+        next_pir = points_in_range[next_pir_idx]
+        if pir == None:
+            if prev_pir == None and next_pir == None:
+                continue
+            
+            pir = {"x": por["x"], "y": por["y"]}
+            line_point = {"x": 0, "y": 0}
+            if prev_pir != None:
+                line_point = points[prev_pir_idx]
+
+            if next_pir != None:
+                line_point = points[next_pir_idx]
+
+            lp = calc_line_params(pir, line_point)
+            x_target = (limit["x.min"] if  pir["x"] < limit["x.min"] else None)
+            if x_target != None:
+                pir["x"] = x_target
+                pir["y"] = calc_y(lp, pir["x"])
+
+            x_target = (limit["x.max"] if  pir["x"] < limit["x.max"] else None)
+            if x_target != None:
+                pir["x"] = x_target
+                pir["y"] = calc_y(lp, pir["x"])
+
+            y_target = (limit["y.min"] if  pir["y"] < limit["y.min"] else None)
+            if y_target != None:
+                pir["y"] = y_target
+                pir["x"] = calc_x(lp, pir["y"])
+
+            y_target = (limit["y.min"] if  pir["y"] < limit["y.min"] else None)
+            if y_target != None:
+                pir["y"] = y_target
+                pir["x"] = calc_x(lp, pir["y"])
+
+            print(f"Nastąpiła korekcja z {por} na {pir}")
+
+        partialy_corrected_points.append(pir)
+
+        
+    return partialy_corrected_points
 
 def generateHexagon(size, position, phase, limit):
     d = []
@@ -158,8 +221,8 @@ y_padding = padding*y_padding_procent
 x_beatwean_section_space = 3
 y_beatwean_section_space = x_beatwean_section_space * y_padding_procent
 
-x_section_count = 3
-y_section_count = 4
+x_section_count = 5
+y_section_count = 8
 
 x_section_space = (x_limit - 2*padding) - (x_section_count-1)*x_beatwean_section_space;
 y_section_space = (y_limit - 2*y_padding) - (y_section_count-1)*y_beatwean_section_space;
