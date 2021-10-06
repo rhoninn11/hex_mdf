@@ -3,7 +3,7 @@ import time
 
 def calc_line_params(p1,p2):
     a = (p1["y"] - p2["y"])/(p1["x"] - p2["x"])
-    b = p1["y"]/(a*p1["x"])
+    b = p1["y"] - a*p1["x"]
     return {"a": a, "b": b}
 
 def calc_y(line_params, x):
@@ -21,6 +21,9 @@ def fit_points_to_the_limit(points, points_in_range, limit):
     partialy_corrected_points = []
 
     for i in range(point_count):
+        partialy_corrected_points.append(None)
+
+    for i in range(point_count):
 
         pir = points_in_range[i]
         por = points[i]
@@ -28,48 +31,51 @@ def fit_points_to_the_limit(points, points_in_range, limit):
         next_pir_idx = i+1 if i != point_count-1 else 0
         prev_pir = points_in_range[prev_pir_idx]
         next_pir = points_in_range[next_pir_idx]
+
+        pcalc = None
         if pir == None:
             if prev_pir == None and next_pir == None:
+                print(f" prev:{points[prev_pir_idx]} por:{por} next:{points[next_pir_idx]}")
                 continue
-            
-            pir = {"x": por["x"], "y": por["y"]}
+
+            pcalc = {"x": por["x"], "y": por["y"]}
             line_point = {"x": 0, "y": 0}
             if prev_pir != None:
-                line_point = points[prev_pir_idx]
+                line_point = prev_pir
 
             if next_pir != None:
                 line_point = points[next_pir_idx]
 
-            lp = calc_line_params(pir, line_point)
-            x_target = (limit["x.min"] if  pir["x"] < limit["x.min"] else None)
+            lp = calc_line_params(pcalc, line_point)
+            x_target = (limit["x.min"] if  pcalc["x"] < limit["x.min"] else None)
             if x_target != None:
-                pir["x"] = x_target
-                pir["y"] = calc_y(lp, pir["x"])
+                pcalc["x"] = x_target
+                pcalc["y"] = calc_y(lp, pcalc["x"])
 
-            x_target = (limit["x.max"] if  pir["x"] < limit["x.max"] else None)
+            x_target = (limit["x.max"] if  pcalc["x"] > limit["x.max"] else None)
             if x_target != None:
-                pir["x"] = x_target
-                pir["y"] = calc_y(lp, pir["x"])
+                pcalc["x"] = x_target
+                pcalc["y"] = calc_y(lp, pcalc["x"])
 
-            y_target = (limit["y.min"] if  pir["y"] < limit["y.min"] else None)
+            y_target = (limit["y.min"] if  pcalc["y"] < limit["y.min"] else None)
             if y_target != None:
-                pir["y"] = y_target
-                pir["x"] = calc_x(lp, pir["y"])
+                pcalc["y"] = y_target
+                pcalc["x"] = calc_x(lp, pcalc["y"])
 
-            y_target = (limit["y.min"] if  pir["y"] < limit["y.min"] else None)
+            y_target = (limit["y.max"] if  pcalc["y"] > limit["y.max"] else None)
             if y_target != None:
-                pir["y"] = y_target
-                pir["x"] = calc_x(lp, pir["y"])
+                pcalc["y"] = y_target
+                pcalc["x"] = calc_x(lp, pcalc["y"])
 
-            print(f"Nastąpiła korekcja z {por} na {pir}")
+        else:
+            pcalc = pir
 
-        partialy_corrected_points.append(pir)
+        partialy_corrected_points[i] = pcalc
 
         
     return partialy_corrected_points
 
-def generateHexagon(size, position, phase, limit):
-    d = []
+def generateHexagonPoints(size, position, phase, limit):
     points = []
 
     x_delta = position["x"];
@@ -87,6 +93,7 @@ def generateHexagon(size, position, phase, limit):
         points.append({"x": x, "y": y})
 
     points_in_range = []
+    out_of_range = True
     for point in points:
         xmaxcond = point["x"] > limit["x.max"]
         xmincond = point["x"] < limit["x.min"]
@@ -96,12 +103,20 @@ def generateHexagon(size, position, phase, limit):
             points_in_range.append(None)
         else:
             points_in_range.append(point)
+            out_of_range = False
 
-    limited_point = fit_points_to_the_limit(points, points_in_range, limit)
-    
-    for point in limited_point:
+    if out_of_range:
+        return None
+
+    limited_points = fit_points_to_the_limit(points, points_in_range, limit)
+    return limited_points
+
+
+def generatePathDescription(points):
+    d = []
+    for point in points:
         if point is None:
-            continue;
+            continue
 
         if(len(d) == 0):
             d.append(f'M {point["x"]} {point["y"]} ')
@@ -110,7 +125,6 @@ def generateHexagon(size, position, phase, limit):
 
     d.append("Z")
     return "".join(d)
-
 
 y = 4
 
@@ -154,8 +168,8 @@ def draw_paths(delta, pattern_limit):
 
     # configurable
     phase = delta;
-    hexagon_size = 3
-    hexagon_spacing = 4
+    hexagon_size = 32
+    hexagon_spacing = 37
     # configurable
 
     mid_triangle_space = math.pi /6
@@ -171,7 +185,7 @@ def draw_paths(delta, pattern_limit):
     y_delta_2 = math.sin(phase_for_delta_2) * hexagon_spacing_real
 
 
-    conf_num = 177;
+    conf_num = 55;
     x_size = conf_num;
     y_size = x_size
     x_correction = -(conf_num/2 +1);
@@ -193,13 +207,13 @@ def draw_paths(delta, pattern_limit):
             hex_position = {"x": hexagon_center["x"] +  x_offset, "y": hexagon_center["y"] + y_offset}
 
 
-            d_value = generateHexagon(hexagon_size, hex_position, phase, pattern_limit )
-            if len(d_value) == 0 or len(d_value) == 1:
+            hex_points = generateHexagonPoints(hexagon_size, hex_position, phase, pattern_limit )
+            if hex_points == None:
                 continue
 
             path_value = "<path\n"
             path_value = path_value + "style=\"fill:none;stroke:#000000;stroke-width:0.1mm;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1\"\n"
-            path_value = path_value + "d=\"" + d_value + "\" />\n"
+            path_value = path_value + "d=\"" + generatePathDescription(hex_points) + "\" />\n"
 
             paths.append(path_value)
 
@@ -221,8 +235,8 @@ y_padding = padding*y_padding_procent
 x_beatwean_section_space = 3
 y_beatwean_section_space = x_beatwean_section_space * y_padding_procent
 
-x_section_count = 5
-y_section_count = 8
+x_section_count = 1
+y_section_count = 1
 
 x_section_space = (x_limit - 2*padding) - (x_section_count-1)*x_beatwean_section_space;
 y_section_space = (y_limit - 2*y_padding) - (y_section_count-1)*y_beatwean_section_space;
