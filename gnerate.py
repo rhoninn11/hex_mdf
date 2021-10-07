@@ -23,6 +23,8 @@ def fit_points_to_the_limit(points, points_in_range, limit):
     for i in range(point_count):
         partialy_corrected_points.append(None)
 
+
+
     for i in range(point_count):
 
         pir = points_in_range[i]
@@ -35,7 +37,6 @@ def fit_points_to_the_limit(points, points_in_range, limit):
         pcalc = None
         if pir == None:
             if prev_pir == None and next_pir == None:
-                print(f" prev:{points[prev_pir_idx]} por:{por} next:{points[next_pir_idx]}")
                 continue
 
             pcalc = {"x": por["x"], "y": por["y"]}
@@ -75,6 +76,41 @@ def fit_points_to_the_limit(points, points_in_range, limit):
         
     return partialy_corrected_points
 
+def fit_points_to_the_limit_2(points, points_in_range, limit):
+
+    point_count = len(points)
+    meta_description = []
+
+    neead_to_fix = False
+    last_state = None
+    for i in range(point_count):
+        point_description = {}
+        next_point_idx = i+1 if i != point_count-1 else 0
+
+        pir = points_in_range[i]
+
+        state = None
+        if pir == None:
+            neead_to_fix = True
+            state = "out"
+        else:
+            state = "in"
+
+        if state != last_state:
+            last_state = state
+            point_description["idx"] = i
+            point_description["state"] = state
+            meta_description.append(point_description)
+
+        # tu dodać analizę lini w stosunku do poprzedniego punktu czy tam następnego
+
+    if neead_to_fix:
+        print(meta_description)
+
+
+    return points_in_range
+        
+
 def generateHexagonPoints(size, position, phase, limit):
     points = []
 
@@ -107,7 +143,7 @@ def generateHexagonPoints(size, position, phase, limit):
 
     if out_of_range:
         return None
-
+    fit_points_to_the_limit_2(points, points_in_range, limit)
     limited_points = fit_points_to_the_limit(points, points_in_range, limit)
     return limited_points
 
