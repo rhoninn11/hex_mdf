@@ -11,7 +11,7 @@ def calc_y(line_params, x):
     return y 
 
 def calc_x(line_params, y):
-    x = (line_params["b"] - y)/line_params["a"]
+    x = (y - line_params["b"])/line_params["a"]
     return x
 
 
@@ -80,7 +80,7 @@ def sort_points(points_w_md):
     sorted_points_count = 0
     point_index = 0
     started = False
-    while sorted_points_count >= point_count:
+    while sorted_points_count <= point_count - 1:
 
         next_point_index = point_index + 1 if point_index != point_count - 1 else 0
         point = points_w_md[point_index]
@@ -113,6 +113,25 @@ def calc_point_on_line_for_specified_limit(line_prameters, all_limits, specified
         tmp_point["y"] = all_limits[specified_limit]
     return tmp_point
 
+def calculate_corner_point(limit, side_1, side_2):
+
+    a = None
+    b = None
+    if side_1 == "x.min" or side_1 == "x.max":
+        a = "x"
+    elif side_1 == "y.min" or side_1 == "y.max":
+        a = "y"
+
+    if side_2 == "x.min" or side_2 == "x.max":
+        b = "x"
+    elif side_2 == "y.min" or side_2 == "y.max":
+        b = "y"
+
+    if a == b:
+        raise "tak nie może być"
+
+    point = {a: limit[side_1], b: limit[side_2]}
+    return point
 
 def fit_points_to_the_limit_2(points_w_md, limit):
 
@@ -120,9 +139,10 @@ def fit_points_to_the_limit_2(points_w_md, limit):
 
     points_to_fix = sort_points(points_w_md)
 
-    started = False
     outrim_start = None
+    outrim_start_lp = None
     outrim_end = None
+    outrim_end_lp = None
 
     fixed_points = []
 
@@ -130,57 +150,61 @@ def fit_points_to_the_limit_2(points_w_md, limit):
     for point_index in range(point_count):
         next_point_index = point_index + 1 if point_index != point_count - 1 else 0
 
+        
         pa = points_to_fix[point_index]["point"]
         pb = points_to_fix[next_point_index]["point"]
 
-        violated_conda = points_to_fix[next_point_index]["point"]
-        violated_condb = points_to_fix[next_point_index]["point"]
+
+        violated_conda = points_to_fix[point_index]["vc"]
+        violated_condb = points_to_fix[next_point_index]["vc"]
 
         lp = calc_line_params(pa,pb)
 
         outrim_is_starting = violated_conda == None and violated_condb != None
         outrim_is_ending = violated_conda != None and violated_condb == None
         inrim = violated_conda == None and violated_condb == None
-        outrim = violated_conda != None and violated_condb != None
 
         if outrim_is_starting:
+            outrim_start_lp = lp
             if len(violated_condb) == 1:
                 outrim_start = violated_condb[0]
             else:
                 min_squared_distance = 10000000000000
                 cond = None
                 for vcond in violated_condb:
-                    tmp_point = calc_point_on_line_for_specified_limit(lp, limit, vcond)
+                    tmp_point = calc_point_on_line_for_specified_limit(outrim_start_lp, limit, vcond)
                     sqdist = calc_squared_distacne(pa, tmp_point)
                     if sqdist < min_squared_distance:
                         min_squared_distance = sqdist
                         cond = vcond
-
                 outrim_start = cond
+
         elif outrim_is_ending:
+            outrim_end_lp = lp
             if len(violated_conda) == 1:
                 outrim_end = violated_conda[0]
             else:
                 min_squared_distance = 10000000000000
                 cond = None
                 for vcond in violated_conda:
-                    tmp_point = calc_point_on_line_for_specified_limit(lp, limit, vcond)
+                    tmp_point = calc_point_on_line_for_specified_limit(outrim_end_lp, limit, vcond)
                     sqdist = calc_squared_distacne(pb, tmp_point)
                     if sqdist < min_squared_distance:
                         min_squared_distance = sqdist
                         cond = vcond
-
                 outrim_end = cond
+
 
 
         if inrim or outrim_is_starting:
             fixed_points.append({"point":pa})
         elif outrim_is_ending:
-            outrim_start_point =  calc_point_on_line_for_specified_limit(lp, limit, outrim_start)
+            outrim_start_point =  calc_point_on_line_for_specified_limit(outrim_start_lp, limit, outrim_start)
             outrim_end_point =  calc_point_on_line_for_specified_limit(lp, limit, outrim_end)
             fixed_points.append({"point":outrim_start_point})
             if outrim_start != outrim_end:
-                print("przypadek rożny")
+                corrner_point = calculate_corner_point(limit, outrim_start, outrim_end)
+                fixed_points.append({"point":corrner_point})
             fixed_points.append({"point":outrim_end_point})
             fixed_points.append({"point":pb})
 
@@ -236,7 +260,8 @@ def generateHexagonPoints(size, position, phase, limit):
     if violated_count == 6:
         return None
     elif 0 < violated_count and violated_count < 6:
-        return fit_points_to_the_limit_2(points_w_md, limit)
+        fixed_points = fit_points_to_the_limit_2(points_w_md, limit)
+        return fixed_points
     else:
         return points_w_md
 
@@ -292,12 +317,12 @@ tail = '''</g>
     #    d="m 9.6383926,12.761904 -0.9449403,7.748512 3.9687497,4.157738 7.370536,-2.078869 1.133928,-8.504464 -3.212797,-4.7247023 z"/>
 
 
-def draw_paths(delta, pattern_limit):
+def draw_paths(delta, pattern_limit, params):
 
     # configurable
     phase = delta;
-    hexagon_size = 10
-    hexagon_spacing = 15
+    hexagon_size = params[0]
+    hexagon_spacing = params[1] + hexagon_size
     # configurable
 
     mid_triangle_space = math.pi /6
@@ -313,13 +338,15 @@ def draw_paths(delta, pattern_limit):
     y_delta_2 = math.sin(phase_for_delta_2) * hexagon_spacing_real
 
 
-    conf_num = 55;
+    conf_num = 105;
     x_size = conf_num;
     y_size = x_size
     x_correction = -(conf_num/2 +1);
     y_correction = x_correction;
 
-    hexagon_center = {"x": 110, "y": 150}
+    x_center = (pattern_limit["x.min"] + pattern_limit["x.max"])/2.0
+    y_center = (pattern_limit["y.min"] + pattern_limit["y.max"])/2.0
+    hexagon_center = {"x": x_center, "y": y_center}
 
     paths = []
 
@@ -340,7 +367,7 @@ def draw_paths(delta, pattern_limit):
                 continue
 
             path_value = "<path\n"
-            path_value = path_value + "style=\"fill:none;stroke:#000000;stroke-width:0.1mm;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1\"\n"
+            path_value = path_value + "style=\"fill:none;stroke:#000000;stroke-width:0.033mm;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1\"\n"
             path_value = path_value + "d=\"" + generatePathDescription(hex_points) + "\" />\n"
 
             paths.append(path_value)
@@ -363,8 +390,14 @@ y_padding = padding*y_padding_procent
 x_beatwean_section_space = 3
 y_beatwean_section_space = x_beatwean_section_space * y_padding_procent
 
-x_section_count = 1
-y_section_count = 1
+x_section_count = 8
+y_section_count = 16
+
+start_hexagon_size = 3
+start_hexagon_spacing = 1
+
+hexagon_size_delta = -0.20
+hexagon_spacing_delta = -0.1
 
 x_section_space = (x_limit - 2*padding) - (x_section_count-1)*x_beatwean_section_space;
 y_section_space = (y_limit - 2*y_padding) - (y_section_count-1)*y_beatwean_section_space;
@@ -397,8 +430,11 @@ for x_section in range(x_section_count):
         } 
 
         print(section_limit, y_section_space)  
+        hexagon_size = start_hexagon_size + y_section*hexagon_size_delta
+        hexagon_spacing = start_hexagon_spacing + x_section*hexagon_spacing_delta
+        params = [hexagon_size, hexagon_spacing]
         
-        section_paths = draw_paths(math.pi*2 * 1.2, section_limit);
+        section_paths = draw_paths(math.pi*2 * 1.2, section_limit,params);
         all_paths.append(section_paths)
 
 svg = []
