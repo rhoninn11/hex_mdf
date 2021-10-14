@@ -211,6 +211,19 @@ def fit_points_to_the_limit_2(points_w_md, limit):
     return fixed_points
 
 
+def generaCirclePoints(cpoint, phase_offet, size, x_center, y_center):
+    points = []
+    phase_delta = 2.0*math.pi/cpoint
+    for i in range(cpoint):
+        phase = phase_offet + phase_delta*i
+
+        y = math.sin(phase) * size/2 + y_center
+        x = math.cos(phase) * size/2 + x_center
+
+        points.append({"x": x, "y": y})
+
+    return points
+
 def generateHexagonPoints(size, position, phase, limit):
     points = []
 
@@ -218,19 +231,10 @@ def generateHexagonPoints(size, position, phase, limit):
     y_delta = position["y"];
 
     point_count = 6
-    phase_delta = 2.0*math.pi/point_count
-    phase_offet = phase
-    for i in range(point_count):
-        phase = phase_offet + phase_delta*i;
+    points = generaCirclePoints(point_count, phase, size, x_delta, y_delta)
 
-        y = math.sin(phase) * size/2 + y_delta;
-        x = math.cos(phase) * size/2 + x_delta;
-
-        points.append({"x": x, "y": y})
-
-    points_w_md = []
-    out_of_range = True
     violated_count = 0
+    points_w_md = []
     for point in points:
         xmaxcond = point["x"] > limit["x.max"]
         xmincond = point["x"] < limit["x.min"]
@@ -279,10 +283,39 @@ def generatePathDescription(points_w_md):
     d.append("Z")
     return "".join(d)
 
-y = 4
+def GenerateKerfEstimationPattern(max, min, limit, smpl_spcing, rows):
+    xspace = limit["x.max"] - limit["x.min"]
+    yspace = limit["y.max"] - limit["y.min"]
 
-parzysty_x = 0;
-nieparzysty_x = 2;
+    per_row_samples = math.floor(xspace/smpl_spcing)
+    rl_spacing = xspace/per_row_samples
+
+    total_sample_count = per_row_samples*rows
+    per_sample_delta = -(max-min)/total_sample_count
+
+
+    per_row_space = yspace/rows
+
+    padding = 5
+
+    paths = []
+    print(f"kerf delta is {per_sample_delta}")
+
+    for row in range(rows):
+        ystart = padding + per_row_space*row + limit["y.min"]
+        yend = ystart + per_row_space - padding
+        for sample in range(per_row_samples):
+            kerf_distance = max + sample*per_sample_delta + row*per_row_samples*per_sample_delta
+            first_line_x = sample*rl_spacing + limit["x.min"]
+            second_line_x = first_line_x + kerf_distance
+
+            path_value = "<path\n"
+            path_value = path_value + "style=\"fill:none;stroke:#000000;stroke-width:0.033mm;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1\"\n"
+            path_value = path_value + f"d=\"M {first_line_x} {ystart} L {first_line_x} {yend} M {second_line_x} {ystart} L {second_line_x} {yend}\" />\n"
+
+            paths.append(path_value)
+
+    return "".join(paths)
 
 
 header = '''<?xml version="1.0" encoding="UTF-8" standalone="no"?>
@@ -296,9 +329,9 @@ header = '''<?xml version="1.0" encoding="UTF-8" standalone="no"?>
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="210mm"
-   height="297mm"
-   viewBox="0 0 210 297"
+   width="297mm"
+   height="420mm"
+   viewBox="0 0 297 420"
    version="1.1"
    id="svg8"
    inkscape:export-filename="/home/leszek/Pulpit/elo.svg.png"
@@ -315,12 +348,17 @@ tail = '''</g>
     # <path
     #    style="fill:none;stroke:#000000;stroke-width:0.26458332mm;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
     #    d="m 9.6383926,12.761904 -0.9449403,7.748512 3.9687497,4.157738 7.370536,-2.078869 1.133928,-8.504464 -3.212797,-4.7247023 z"/>
+def path_svg(path_decription):
+    path_value = "<path\n"
+    path_value = path_value + "style=\"fill:none;stroke:#000000;stroke-width:0.033mm;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1\"\n"
+    path_value = path_value + "d=\"" + path_decription + "\" />\n"
 
+    return path_value
 
 def draw_paths(delta, pattern_limit, params):
 
     # configurable
-    phase = delta;
+    phase = delta
     hexagon_size = params[0]
     hexagon_spacing = params[1] + hexagon_size
     # configurable
@@ -338,11 +376,11 @@ def draw_paths(delta, pattern_limit, params):
     y_delta_2 = math.sin(phase_for_delta_2) * hexagon_spacing_real
 
 
-    conf_num = 105;
-    x_size = conf_num;
+    conf_num = 105
+    x_size = conf_num
     y_size = x_size
-    x_correction = -(conf_num/2 +1);
-    y_correction = x_correction;
+    x_correction = -(conf_num/2 +1)
+    y_correction = x_correction
 
     x_center = (pattern_limit["x.min"] + pattern_limit["x.max"])/2.0
     y_center = (pattern_limit["y.min"] + pattern_limit["y.max"])/2.0
@@ -375,71 +413,205 @@ def draw_paths(delta, pattern_limit, params):
     return "".join(paths)
 
 
-animation_points = 1;
-
-x_limit = 210.0
-y_limit = 297.0
-padding_procent = 0.02
-
-
-padding = x_limit*padding_procent
-y_padding_procent = 0.9 
-y_padding = padding*y_padding_procent
+def generate_paths(parameters):
+    x_limit = parameters["x_limit"]
+    y_limit = parameters["y_limit"]
+    padding_procent = parameters["padding_procent"]
 
 
-x_beatwean_section_space = 3
-y_beatwean_section_space = x_beatwean_section_space * y_padding_procent
+    padding = x_limit*padding_procent
+    y_padding_procent = 0.9 
+    y_padding = padding*y_padding_procent
 
-x_section_count = 8
-y_section_count = 16
+    x_beatwean_section_space = parameters["secion_padding"]
+    y_beatwean_section_space = x_beatwean_section_space * y_padding_procent
 
-start_hexagon_size = 3
-start_hexagon_spacing = 1
+    x_section_count = parameters["x_section_count"]
+    y_section_count = parameters["y_section_count"]
 
-hexagon_size_delta = -0.20
-hexagon_spacing_delta = -0.1
+    hsize = []
+    hspacing = []
 
-x_section_space = (x_limit - 2*padding) - (x_section_count-1)*x_beatwean_section_space;
-y_section_space = (y_limit - 2*y_padding) - (y_section_count-1)*y_beatwean_section_space;
+    if parameters["predefined_size_and_spacing"] == False:
 
-x_section_width = x_section_space/x_section_count;
-y_section_height = y_section_space/y_section_count;
-print(y_section_space, y_limit, y_padding, y_beatwean_section_space, y_section_height)
+        start_hexagon_size = parameters["start_hexagon_size"]
+        end_hexagon_size = parameters["end_hexagon_size"]
+        start_hexagon_spacing = parameters["start_hexagon_spacing"]
+        end_hexagon_spacing = parameters["end_hexagon_spacing"]
 
-x1 = padding
-x2 = x_limit - padding
-y1 = y_padding
-y2 = y_limit - y_padding
+        hexagon_size_delta = -(start_hexagon_size - end_hexagon_size)/y_section_count
+        hexagon_spacing_delta = -(start_hexagon_spacing - end_hexagon_spacing)/x_section_count
 
-all_paths = []
 
-for x_section in range(x_section_count):
-    for y_section in range(y_section_count):
+        for y_section in range(y_section_count):
+            hsize.append([])
+            hspacing.append([])
+            for x_section in range(x_section_count):
+                hsize[y_section].append(start_hexagon_size + y_section*hexagon_size_delta)
+                hspacing[y_section].append(start_hexagon_spacing + x_section*hexagon_spacing_delta)
 
-        x_min = x1 + (x_section_width+x_beatwean_section_space)*x_section
-        x_center = x_min + x_section_width/2.0
-        x_max = x_min + x_section_width
+    else:
+        if len(parameters["size_array"]) != y_section_count and all(len(row) == x_section_count for row in parameters["size_array"]) :
+            raise "nie zgadza sie size_array"
+        else:
+            hsize = parameters["size_array"]
 
-        y_min = y1 + (y_section_height+y_beatwean_section_space)*y_section
-        y_center = y_min + y_section_height/2.0
-        y_max = y_min + y_section_height
+        if len(parameters["spacing_array"]) != y_section_count and all(len(row) == x_section_count for row in parameters["spacing_array"]) :
+            raise "nie zgadza sie spacing_array"
+        else:
+            hspacing = parameters["spacing_array"]
 
-        section_limit = {
-            "x.min": x_min, "x.max": x_max,
-            "y.min": y_min, "y.max": y_max
-        } 
 
-        print(section_limit, y_section_space)  
-        hexagon_size = start_hexagon_size + y_section*hexagon_size_delta
-        hexagon_spacing = start_hexagon_spacing + x_section*hexagon_spacing_delta
-        params = [hexagon_size, hexagon_spacing]
+
+    x_space_wout_padding = (x_limit - 2*padding)
+    y_space_wout_padding = (y_limit - 2*y_padding)
+
+    x_section_space = x_space_wout_padding - (x_section_count-1)*x_beatwean_section_space
+    y_section_space = y_space_wout_padding - (y_section_count-1)*y_beatwean_section_space
+
+    x_section_width = x_section_space/x_section_count
+    y_section_height = y_section_space/y_section_count
+    print(y_section_space, y_limit, y_padding, y_beatwean_section_space, y_section_height)
+
+    xa = parameters["x_start"]
+    xb = xa + x_limit
+
+    ya = parameters["y_start"]
+    yb = ya + y_limit
+
+    x1 = parameters["x_start"] + padding
+    x2 = x1 + x_space_wout_padding
+    y1 = parameters["y_start"] + y_padding
+    y2 = y1 + y_space_wout_padding
+
+    all_paths = []
+
+
+
+    kerf_sections = 0
+    kerf_limit = {
+                "x.min": x1, "x.max": x2,
+                "y.min": y1, "y.max": y1 + kerf_sections*y_section_height + (kerf_sections-1)*y_beatwean_section_space
+            } 
+
+    if parameters["add_holes"]:
+        x_center = xa + parameters["hole_offest"]
+        y_center = ya + parameters["hole_offest"]
         
-        section_paths = draw_paths(math.pi*2 * 1.2, section_limit,params);
-        all_paths.append(section_paths)
+        cpoints = generaCirclePoints(20, 0, parameters["hole_size"], x_center, y_center)
+        cpoints_w_md = []
+        for cpoint in cpoints:
+            cpoints_w_md.append({"point": cpoint})
+        svg_path = path_svg(generatePathDescription(cpoints_w_md))
+        all_paths.append(svg_path)
+
+        x_center = xb - parameters["hole_offest"]
+        y_center = ya + parameters["hole_offest"]
+        
+        cpoints = generaCirclePoints(20, 0, parameters["hole_size"], x_center, y_center)
+        cpoints_w_md = []
+        for cpoint in cpoints:
+            cpoints_w_md.append({"point": cpoint})
+        svg_path = path_svg(generatePathDescription(cpoints_w_md))
+        all_paths.append(svg_path)
+
+        x_center = xb - parameters["hole_offest"]
+        y_center = yb - parameters["hole_offest"]
+        
+        cpoints = generaCirclePoints(20, 0, parameters["hole_size"], x_center, y_center)
+        cpoints_w_md = []
+        for cpoint in cpoints:
+            cpoints_w_md.append({"point": cpoint})
+        svg_path = path_svg(generatePathDescription(cpoints_w_md))
+        all_paths.append(svg_path)
+
+        x_center = xa + parameters["hole_offest"]
+        y_center = yb - parameters["hole_offest"]
+        
+        cpoints = generaCirclePoints(20, 0, parameters["hole_size"], x_center, y_center)
+        cpoints_w_md = []
+        for cpoint in cpoints:
+            cpoints_w_md.append({"point": cpoint})
+        svg_path = path_svg(generatePathDescription(cpoints_w_md))
+        all_paths.append(svg_path)
+
+
+    # kerf_paths = GenerateKerfEstimationPattern(3.0, 0.06, kerf_limit, 5.0, 4)
+    # all_paths.append(kerf_paths)
+    shrinkage_factor = parameters["shrinkage_factor"]
+
+    for x_section in range(x_section_count):
+        for y_section in range(y_section_count):
+            if(y_section < kerf_sections):
+                continue
+
+            x_min = x1 + (x_section_width+x_beatwean_section_space)*x_section
+            x_center = x_min + x_section_width/2.0
+            x_max = x_min + x_section_width
+
+            y_min = y1 + (y_section_height+y_beatwean_section_space)*y_section
+            y_center = y_min + y_section_height/2.0
+            y_max = y_min + y_section_height
+
+            section_limit = {
+                "x.min": x_min, "x.max": x_max - y_section*shrinkage_factor*0.7,
+                "y.min": y_min, "y.max": y_max - y_section*shrinkage_factor
+            } 
+
+            print(section_limit, y_section_space)  
+            hexagon_size = hsize[y_section][x_section]
+            hexagon_spacing = hspacing[y_section][x_section]
+            params = [hexagon_size, hexagon_spacing]
+            
+            section_paths = draw_paths(math.pi*2 * 1.2, section_limit,params)
+            all_paths.append(section_paths)
+
+    return all_paths
+
+
+prameters = {
+    "x_limit": 297.0,
+    "y_limit": 420.0,
+    "x_section_count": 4,
+    "y_section_count": 1,
+    "start_hexagon_size": 3,
+    "end_hexagon_size": 0.256,
+    "start_hexagon_spacing": 0.86,
+    "end_hexagon_spacing": 0.1,
+    "secion_padding": 10,
+    "shrinkage_factor": 0,
+    "padding_procent": 0.05,
+    "x_start": 0.0,
+    "y_start": 0.0,
+    "add_holes": True,
+    "hole_offest": 8,
+    "hole_size": 3,
+    "predefined_size_and_spacing": True,
+    "size_array": [[1.55, 1.26, 0.97, 0.68]],
+    "spacing_array": [[0.86, 0.75, 0.68, 0.68]]
+
+}
+x_space = 297.0
+y_space = 420.0
+
+x_meta_sections = 1
+y_meta_sections = 6
+
+per_x_meta_space = x_space/x_meta_sections
+per_y_meta_space = y_space/y_meta_sections
+
+prameters["x_limit"] = per_x_meta_space
+prameters["y_limit"] = per_y_meta_space
 
 svg = []
-svg.append(header);
-svg.append("".join(all_paths))
+svg.append(header)
+
+for x_meta_section in range(x_meta_sections):
+    for y_meta_section in range(y_meta_sections):
+        prameters["x_start"] = per_x_meta_space*x_meta_section
+        prameters["y_start"] = per_y_meta_space*y_meta_section
+
+        svg.append("".join(generate_paths(prameters)))
 svg.append(tail);
 
 result_svg = "".join(svg);
