@@ -536,6 +536,19 @@ def generate_paths(parameters):
         all_paths.append(svg_path)
 
 
+    if parameters["add_holes"]:
+        cpoints = [
+            {"x": xa + parameters["border_offset"], "y": ya + parameters["border_offset"]},
+            {"x": xa + parameters["border_offset"], "y": yb - parameters["border_offset"]},
+            {"x": xb - parameters["border_offset"], "y": yb - parameters["border_offset"]},
+            {"x": xb - parameters["border_offset"], "y": ya + parameters["border_offset"]}
+        ]
+        cpoints_w_md = []
+        for cpoint in cpoints:
+            cpoints_w_md.append({"point": cpoint})
+        svg_path = path_svg(generatePathDescription(cpoints_w_md))
+        all_paths.append(svg_path)
+
     # kerf_paths = GenerateKerfEstimationPattern(3.0, 0.06, kerf_limit, 5.0, 4)
     # all_paths.append(kerf_paths)
     shrinkage_factor = parameters["shrinkage_factor"]
@@ -572,7 +585,7 @@ def generate_paths(parameters):
 prameters = {
     "x_limit": 297.0,
     "y_limit": 420.0,
-    "x_section_count": 4,
+    "x_section_count": 5,
     "y_section_count": 1,
     "start_hexagon_size": 3,
     "end_hexagon_size": 0.256,
@@ -584,11 +597,14 @@ prameters = {
     "x_start": 0.0,
     "y_start": 0.0,
     "add_holes": True,
-    "hole_offest": 8,
+    "hole_offest": 10,
     "hole_size": 3,
     "predefined_size_and_spacing": True,
-    "size_array": [[1.55, 1.26, 0.97, 0.68]],
-    "spacing_array": [[0.86, 0.75, 0.68, 0.68]]
+    "size_array": [[2.13, 1.84, 1.55, 1.26, 0.97]],
+    "spacing_array": [[0.86, 0.86, 0.86, 0.75, 0.68]],
+    "add_border": False,
+    "border_offset": 3
+
 
 }
 x_space = 297.0
