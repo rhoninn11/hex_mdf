@@ -22,23 +22,33 @@ CHILD_DR = {
     "W": ["N", "S"],
 }
 
-def fractal_gen(origin, length, levels, direction):
+def fractal_gen(origin, length, levels, direction, term=0):
     paths = []
     if levels == 0:
         return paths
 
     points = []
+    thisckenss = 1
     childs = CHILD_DR[direction]
+    
+    first = True
+    my_origin = 0
+
     for child in childs:
-        point = {"x":0, "y":0}
+        last_child = child
+        
+        point = {"x":origin["x"], "y":origin["y"]}
+        # add thickness
         point["x"] = origin["x"] + DR_NUM[child]["x"]*length/2
         point["y"] = origin["y"] + DR_NUM[child]["y"]*length/2
+        if first:
+            first = False
 
+        fractal_points = fractal_gen(point, length*0.7071067, levels-1, child)
         points.append(point)
-        paths.extend(fractal_gen(point, length*0.7071067, levels-1, child))
+        points.extend(fractal_points)
 
-    paths.append(points_2_path(points))
-    return paths
+    return points
 
     
         

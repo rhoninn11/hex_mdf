@@ -1,6 +1,7 @@
 import hexagonal_patern
 from recursive_H_fractal import fractal_gen, DR
 from proj_const import header,tail
+from util import points_2_path
 
 hexagonal_prameters = {
     "x_limit": 297.0,
@@ -38,8 +39,6 @@ per_y_meta_space = y_space/y_meta_sections
 hexagonal_prameters["x_limit"] = per_x_meta_space
 hexagonal_prameters["y_limit"] = per_y_meta_space
 
-svg = []
-svg.append(header())
 
 # for x_meta_section in range(x_meta_sections):
 #     for y_meta_section in range(y_meta_sections):
@@ -48,9 +47,12 @@ svg.append(header())
 
 #         svg.append("".join(h.generate_hexagonal_patern_paths(hexagonal_prameters)))
 origin = {"x": 100, "y": 100}
-fractal_svg = fractal_gen(origin, 75, 10, DR["N"])
-svg.append("".join(fractal_svg))
-svg.append(tail());
+fractal_points = fractal_gen(origin, 75, 20, DR["N"])
+
+svg = []
+svg.append(header())
+svg.append(points_2_path(fractal_points))
+svg.append(tail())
 
 result_svg = "".join(svg);
 
