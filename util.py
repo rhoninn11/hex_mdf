@@ -1,3 +1,4 @@
+import math
 
 # all in svg context
 def points_2_D(points):
@@ -17,4 +18,26 @@ def points_2_path(points):
     path_value = path_value + "d=\"" + points_2_D(points) + "\" />\n"
 
     return path_value
+
+def calc_point_dist(p1,p2):
+    xd = p1["x"] - p2["x"]
+    yd = p1["y"] - p2["y"]
+
+    if xd == 0:
+        return abs(yd)
+
+    if yd == 0:
+        return abs(xd)
+
+    return math.sqrt(xd*xd + yd*yd)
+
+def calculate_path_length(points):
+    
+    total_d = 0
+    for index in range(len(points) - 1):
+        p1 = points[index]
+        p2 = points[index + 1]
+        total_d += calc_point_dist(p1,p2)
+    
+    return total_d
 
