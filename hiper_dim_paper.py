@@ -42,7 +42,7 @@ def gen_hex_points(origin, size):
     return gon_points
 
 factor = 0.99
-delta = 0.02
+delta = 0.5
 verts = 6
 middle_root = [0.0,0.0]
 
@@ -99,7 +99,8 @@ def gen_hex_full_page_grid(origin, size, asize):
     dirs = trace_circle(6)
     retrans_dirs = transmult(dirs, middle_root, size)
 
-    layers_count = 36
+    base = 3
+    layers_count = base*3*3
     ifix = [min(i%6,1)*i for i in range((layers_count-1)*6 + 1)]
     root_layers = [[inner_root]]
 
@@ -115,14 +116,43 @@ def gen_hex_full_page_grid(origin, size, asize):
         ifix[l*6] = l*6 
         root_layers.append(layer)
 
+    num = 3
+    root_layers1 = []
+    for i in range(base*3):
+        root_layers1.append([ root_layers[num*i][loc*num] for loc in range(max(6*i, 1))])
+
+    num = 6
+    root_layers2 = []
+    for i in range(base):
+        root_layers2.append([ root_layers[num*i][loc*num] for loc in range(max(6*i, 1))])
+
+
     r = []
     for l in root_layers:
         r.extend(l)
-    
+
     grid = []
     for loc in r:
         root_grid = gen_hex_points(loc, size/2 - asize*delta/3)
         grid.append(root_grid)
+
+    r = []
+    for l in root_layers1:
+        r.extend(l)
+
+    for loc in r:
+        root_grid = gen_hex_points(loc, size/2*3 - asize*delta/3)
+        grid.append(root_grid)
+
+    r = []
+    for l in root_layers2:
+        r.extend(l)
+
+    for loc in r:
+        root_grid = gen_hex_points(loc, size/2*3*3 - asize*delta/3)
+        grid.append(root_grid)
+
+    
 
     return grid
 

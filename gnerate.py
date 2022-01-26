@@ -51,7 +51,6 @@ hexagonal_prameters["y_limit"] = per_y_meta_space
 origin = {"x": 100, "y": 100}
 fractal_points = fractal_gen(origin, 75, 1, DR["N"])
 paper_patern_pointes = paper_pattern_gen();
-
 svg = []
 svg.append(header())
 svg.append(util.points_2_path(paper_patern_pointes))
