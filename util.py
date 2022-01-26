@@ -1,21 +1,35 @@
 import math
 
 # all in svg context
-def points_2_D(points):
+
+def points_loop(points, xy):
     d = []
+    x = xy[0];
+    y = xy[1];
     for point in points:
         if(len(d) == 0):
-            d.append(f'M {point["x"]} {point["y"]} ')
+            d.append(f'M {point[x]} {point[y]} ')
         else:
-            d.append(f'L {point["x"]} {point["y"]} ')
+            d.append(f'L {point[x]} {point[y]} ')
 
-    d.append("Z")
+    d.append("Z ")
+    dtxt = "".join(d)
+    return dtxt
+
+
+def pointsToD(data_list):
+    d = []
+
+    for point_list in data_list:
+        d.append(points_loop(point_list, ["x", "y"]))
+
+    
     return "".join(d)
 
 def points_2_path(points):
     path_value = "<path\n"
     path_value = path_value + "style=\"fill:none;stroke:#000000;stroke-width:0.033mm;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1\"\n"
-    path_value = path_value + "d=\"" + points_2_D(points) + "\" />\n"
+    path_value = path_value + "d=\"" + pointsToD(points) + "\" />\n"
 
     return path_value
 
