@@ -68,11 +68,11 @@ def gen_hex_roots(origin, size, phase_shift = False, depth = 2):
         thilesilen = lalesilen + 1
         lalelen = max(6*lalesilen,1)
         for nDirId in range(6):
-            dirOff = nDirId * lalelen
+            dirOff = nDirId * lalesilen
             to_copy_idx = [ leOff + (dirOff + n )%lalelen for n in range(thilesilen) ] # first complex layer n is 0, 
             to_copy = [ result[idx] for idx in to_copy_idx ] 
             result.extend(transmult(to_copy, dirs[nDirId], 1.0))
-        leOff = leOff + thilesilen*6
+        leOff = leOff + lalelen
     
     return result
 
@@ -83,7 +83,7 @@ def gen_hex_grid(origin, size, asize, phase_shift = False):
         root_grid = gen_hex_points(root_to_grid, size/2 - asize*delta)
         grid.append(root_grid)
 
-    return grid;
+    return grid
 
 def gen_hex_grid2(origin, size, asize, phase_shift = False):
     
@@ -95,7 +95,7 @@ def gen_hex_grid2(origin, size, asize, phase_shift = False):
         root_grid = gen_hex_points(root_to_grid, size/2 - asize*delta/3)
         grid.append(root_grid)
 
-    return grid;
+    return grid
     
 def gen_hex_grid3(origin, size, asize, phase_shift = False):
     grid = []
@@ -106,7 +106,7 @@ def gen_hex_grid3(origin, size, asize, phase_shift = False):
         root_grid = gen_hex_points(root_to_grid, size/2 - asize*delta/3)
         grid.append(root_grid)
 
-    return grid;
+    return grid
 
 def displocation(a0, a1):
     return [a1[0] - a0[0], a1[1] - a0[1]]
@@ -122,7 +122,7 @@ def normalize(a0):
 def hex_sum(a0, a1, delta):
 
     disloc = displocation(a0, a1)
-    dir = normalize(disloc);
+    dir = normalize(disloc)
     dir_otho = [dir[1], -dir[0]]
     length = norm(disloc)
     
@@ -143,13 +143,13 @@ def hex_sum(a0, a1, delta):
 
 def sum(hex1, hex2, dir):
 
-    hex1_idx = [];
+    hex1_idx = []
     for i in range(len(hex1)):
-        sum = hex1[i][0]*dir(0) + hex1[i][1]*dir(1);
+        sum = hex1[i][0]*dir(0) + hex1[i][1]*dir(1)
         print(sum, i)
-    hex2_idx = [];
+    hex2_idx = []
     for i in range(len(hex2)):
-        sum = hex1[i][0]*dir(0) + hex1[i][1]*dir(1);
+        sum = hex1[i][0]*dir(0) + hex1[i][1]*dir(1)
         print(sum, i)
 
     return [hex1[0], hex2[0]]
@@ -157,12 +157,12 @@ def sum(hex1, hex2, dir):
 def gen_hex_grid4(origin, size, asize, phase_shift = False):
     grid = []
     
-    roots = gen_hex_roots(origin,size,phase_shift,2)
+    roots = gen_hex_roots(origin,size*math.sqrt(3)/3,phase_shift,3)
     alt_roots = gen_hex_roots(origin,size*math.sqrt(3)/3*2,not phase_shift)
     alt_roots1 = gen_hex_roots(origin,size*math.sqrt(3),not phase_shift)
     delta = 0.5
     for root_to_grid in roots:
-        root_grid = gen_hex_points(root_to_grid, size/math.sqrt(3) - delta)
+        root_grid = gen_hex_points(root_to_grid, size/3)
         grid.append(root_grid)
 
     # for root_to_grid in alt_roots:
