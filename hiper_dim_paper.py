@@ -1,14 +1,14 @@
 import math
 from pickle import FALSE
+import numpy as np
 
 def trace_circle(circ_dim):
     result = []
 
     init_phase = math.pi/2
-    finish_phase = 5*math.pi/2
+    finish_phase = 5*math.pi/2 - 0.01 # to not double first point
 
-
-    phase_delta = 2*math.pi/circ_dim;
+    phase_delta = 2*math.pi/circ_dim
     phase = init_phase
     while phase < finish_phase:
         polarity = math.sin(phase)
@@ -59,15 +59,22 @@ def trace_hex(phase_shift = False):
         return trace_circle(6)
 
 
-def gen_hex_roots(origin, size, phase_shift = False):
-    outter_roots = trace_hex(phase_shift)
-    outter_roots  = transmult(outter_roots, origin, size);
-    inner_root = transmult([middle_root], origin, size)[0];
-    roots = [inner_root]
-    roots.extend(outter_roots)
-
-    return roots
-
+def gen_hex_roots(origin, size, phase_shift = False, depth = 2): 
+    leOff = 0
+    dirs = transmult(trace_hex(phase_shift), middle_root, size) # layer 0, depth = 0 or 1 
+    result = transmult([middle_root], origin, size) # layer 0, depth = 0 or 1 
+    for nLayerId in range(depth-1): # layer 1+, depth 2+
+        lalesilen = nLayerId
+        thilesilen = lalesilen + 1
+        lalelen = max(6*lalesilen,1)
+        for nDirId in range(6):
+            dirOff = nDirId * lalelen
+            to_copy_idx = [ leOff + (dirOff + n )%lalelen for n in range(thilesilen) ] # first complex layer n is 0, 
+            to_copy = [ result[idx] for idx in to_copy_idx ] 
+            result.extend(transmult(to_copy, dirs[nDirId], 1.0))
+        leOff = leOff + thilesilen*6
+    
+    return result
 
 def gen_hex_grid(origin, size, asize, phase_shift = False):
     grid = []
@@ -150,7 +157,7 @@ def sum(hex1, hex2, dir):
 def gen_hex_grid4(origin, size, asize, phase_shift = False):
     grid = []
     
-    roots = gen_hex_roots(origin,size,phase_shift)
+    roots = gen_hex_roots(origin,size,phase_shift,2)
     alt_roots = gen_hex_roots(origin,size*math.sqrt(3)/3*2,not phase_shift)
     alt_roots1 = gen_hex_roots(origin,size*math.sqrt(3),not phase_shift)
     delta = 0.5
@@ -166,8 +173,8 @@ def gen_hex_grid4(origin, size, asize, phase_shift = False):
     #     root_grid = gen_hex_points(root_to_grid, size/math.sqrt(3) - delta)
     #     grid.append(root_grid)
 
-    alt_roots2 = alt_roots[1:7];
-    alt_roots3 = alt_roots1[1:7];
+    alt_roots2 = alt_roots[1:7]
+    alt_roots3 = alt_roots1[1:7]
 
     for i in range(len(alt_roots2)):
         dir = [alt_roots2[i], alt_roots3[i]]
